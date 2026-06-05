@@ -39,12 +39,41 @@ map.addLayer(drawnItems);
 let manualParkingItems = new L.FeatureGroup();
 map.addLayer(manualParkingItems);
 
+let measurementItems = new L.FeatureGroup();
+map.addLayer(measurementItems);
+
 let selectedPolygon = null;
 let manualParkingMode = false;
+let areaMeasureMode = false;
 
 let buildingLayer = null;
 let poiLayer = null;
 let parkingLayer = null;
+
+// =========================
+// Add measurement buttons by JS
+// =========================
+
+function addMeasurementButtons() {
+  const manualParkingBtn = document.getElementById("manualParkingBtn");
+  const clearManualParkingBtn = document.getElementById("clearManualParkingBtn");
+
+  if (!manualParkingBtn || !clearManualParkingBtn) return;
+  if (document.getElementById("measureAreaBtn")) return;
+
+  const measureAreaBtn = document.createElement("button");
+  measureAreaBtn.id = "measureAreaBtn";
+  measureAreaBtn.textContent = "Measure Area Mode";
+
+  const clearMeasurementsBtn = document.createElement("button");
+  clearMeasurementsBtn.id = "clearMeasurementsBtn";
+  clearMeasurementsBtn.textContent = "Clear Measurements";
+
+  clearManualParkingBtn.insertAdjacentElement("afterend", measureAreaBtn);
+  measureAreaBtn.insertAdjacentElement("afterend", clearMeasurementsBtn);
+}
+
+addMeasurementButtons();
 
 // =========================
 // Leaflet Draw
@@ -68,7 +97,13 @@ const drawControl = new L.Control.Draw({
         fillOpacity: 0
       }
     },
-    polyline: false,
+    polyline: {
+      shapeOptions: {
+        color: "#111111",
+        weight: 2,
+        dashArray: "4,4"
+      }
+    },
     circle: false,
     marker: false,
     circlemarker: false
@@ -85,6 +120,32 @@ map.addControl(drawControl);
 map.on(L.Draw.Event.CREATED, function (event) {
   const layer = event.layer;
 
+  // Measure distance
+  if (event.layerType === "polyline") {
+    const geojson = layer.toGeoJSON();
+
+    const lengthMiles = turf.length(geojson, { units: "miles" });
+    const lengthFeet = lengthMiles * 5280;
+
+    layer.setStyle({
+      color: "#111111",
+      weight: 2,
+      dashArray: "4,4"
+    });
+
+    layer.bindPopup(`
+      <b>Measured Distance</b><br>
+      ${lengthFeet.toFixed(0)} ft<br>
+      ${lengthMiles.toFixed(2)} miles
+    `);
+
+    measurementItems.addLayer(layer);
+    layer.openPopup();
+
+    return;
+  }
+
+  // Manual parking polygon
   if (manualParkingMode) {
     layer.setStyle({
       color: "#777777",
@@ -111,6 +172,37 @@ map.on(L.Draw.Event.CREATED, function (event) {
     return;
   }
 
+  // Measure area polygon
+  if (areaMeasureMode) {
+    layer.setStyle({
+      color: "#111111",
+      weight: 2,
+      dashArray: "4,4",
+      fillColor: "#ffffff",
+      fillOpacity: 0.05
+    });
+
+    const areaFeature = layer.toGeoJSON();
+    const areaSqM = turf.area(areaFeature);
+    const areaSqFt = areaSqM * 10.7639;
+    const areaAcres = areaSqFt / 43560;
+
+    layer.bindPopup(`
+      <b>Measured Area</b><br>
+      ${Math.round(areaSqFt).toLocaleString()} sf<br>
+      ${areaAcres.toFixed(2)} acres
+    `);
+
+    measurementItems.addLayer(layer);
+    layer.openPopup();
+
+    document.getElementById("summary").innerHTML =
+      "<p>Measured area added. Use <b>Clear Measurements</b> to remove it.</p>";
+
+    return;
+  }
+
+  // Main analysis polygon
   drawnItems.clearLayers();
 
   layer.setStyle({
@@ -230,7 +322,7 @@ async function fetchOSMData(bbox) {
   const { south, west, north, east } = bbox;
 
   const query = `
-    [out:json][timeout:60];
+    [out:json][timeout:90];
     (
       way["building"](${south},${west},${north},${east});
 
@@ -585,6 +677,11 @@ function getManualParkingFeatures() {
 function setManualParkingMode(active) {
   manualParkingMode = active;
 
+  if (active) {
+    areaMeasureMode = false;
+    updateAreaMeasureButton(false);
+  }
+
   const btn = document.getElementById("manualParkingBtn");
 
   if (manualParkingMode) {
@@ -603,6 +700,53 @@ function setManualParkingMode(active) {
 }
 
 // =========================
+// Measurement helpers
+// =========================
+
+function updateAreaMeasureButton(active) {
+  const btn = document.getElementById("measureAreaBtn");
+  if (!btn) return;
+
+  if (active) {
+    btn.textContent = "Measure Area Mode: ON";
+    btn.classList.add("active-mode");
+  } else {
+    btn.textContent = "Measure Area Mode";
+    btn.classList.remove("active-mode");
+  }
+}
+
+function setAreaMeasureMode(active) {
+  areaMeasureMode = active;
+
+  if (active) {
+    manualParkingMode = false;
+    const parkingBtn = document.getElementById("manualParkingBtn");
+    if (parkingBtn) {
+      parkingBtn.textContent = "Add Manual Parking Polygon";
+      parkingBtn.classList.remove("active-mode");
+    }
+
+    document.getElementById("summary").innerHTML =
+      "<p>Measure Area Mode is ON. Draw a polygon or rectangle to measure its area.</p>";
+  } else {
+    document.getElementById("summary").innerHTML =
+      "<p>Measure Area Mode is OFF. Draw the analysis polygon or run analysis.</p>";
+  }
+
+  updateAreaMeasureButton(active);
+}
+
+function clearMeasurements() {
+  measurementItems.clearLayers();
+  areaMeasureMode = false;
+  updateAreaMeasureButton(false);
+
+  document.getElementById("summary").innerHTML =
+    "<p>Measurements cleared.</p>";
+}
+
+// =========================
 // Main analysis
 // =========================
 
@@ -613,6 +757,7 @@ async function runAnalysis() {
   }
 
   setManualParkingMode(false);
+  setAreaMeasureMode(false);
 
   document.getElementById("summary").innerHTML = "<p>Loading OSM data...</p>";
 
@@ -882,16 +1027,23 @@ async function runAnalysis() {
 function clearAll() {
   drawnItems.clearLayers();
   manualParkingItems.clearLayers();
+  measurementItems.clearLayers();
+
   selectedPolygon = null;
   manualParkingMode = false;
+  areaMeasureMode = false;
 
   if (buildingLayer) map.removeLayer(buildingLayer);
   if (poiLayer) map.removeLayer(poiLayer);
   if (parkingLayer) map.removeLayer(parkingLayer);
 
-  const btn = document.getElementById("manualParkingBtn");
-  btn.textContent = "Add Manual Parking Polygon";
-  btn.classList.remove("active-mode");
+  const parkingBtn = document.getElementById("manualParkingBtn");
+  if (parkingBtn) {
+    parkingBtn.textContent = "Add Manual Parking Polygon";
+    parkingBtn.classList.remove("active-mode");
+  }
+
+  updateAreaMeasureButton(false);
 
   document.getElementById("summary").innerHTML =
     "<p>Search a place, draw a custom polygon, and analyze buildings, tenants, and parking lots inside the selected area.</p>";
@@ -910,27 +1062,19 @@ function clearManualParking() {
 }
 
 // =========================
-// Events
-// =========================
-
-// =========================
 // Google Street View
 // =========================
 
 function openGoogleStreetView() {
-
   let lat;
   let lon;
 
   if (selectedPolygon) {
-
     const center = turf.centroid(selectedPolygon);
 
     lon = center.geometry.coordinates[0];
     lat = center.geometry.coordinates[1];
-
   } else {
-
     const mapCenter = map.getCenter();
 
     lat = mapCenter.lat;
@@ -943,7 +1087,9 @@ function openGoogleStreetView() {
   window.open(streetViewURL, "_blank");
 }
 
-
+// =========================
+// Events
+// =========================
 
 document.getElementById("searchBtn").addEventListener("click", searchPlace);
 document.getElementById("runBtn").addEventListener("click", runAnalysis);
@@ -955,5 +1101,10 @@ document.getElementById("manualParkingBtn").addEventListener("click", () => {
 
 document.getElementById("clearManualParkingBtn").addEventListener("click", clearManualParking);
 
-document.getElementById("streetViewBtn")
-  .addEventListener("click", openGoogleStreetView);
+document.getElementById("streetViewBtn").addEventListener("click", openGoogleStreetView);
+
+document.getElementById("measureAreaBtn").addEventListener("click", () => {
+  setAreaMeasureMode(!areaMeasureMode);
+});
+
+document.getElementById("clearMeasurementsBtn").addEventListener("click", clearMeasurements);
