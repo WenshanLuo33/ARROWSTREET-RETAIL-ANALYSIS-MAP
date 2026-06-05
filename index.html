@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Retail Analysis Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div id="sidebar">
+    <h2>Retail Analysis</h2>
+
+    <label>Search Place / Address</label>
+    <input
+      id="searchInput"
+      type="text"
+      placeholder="e.g. Marketplace Lynnfield, MA"
+    />
+
+    <button id="searchBtn">Search Place</button>
+
+    <hr />
+
+    <p class="instruction">
+      Step 1: Draw the main analysis boundary.<br>
+      Step 2: Click Run Analysis.<br>
+      Step 3: If parking is missing, draw manual parking polygons and rerun analysis.
+    </p>
+
+    <button id="runBtn">Run Analysis</button>
+
+    <button id="streetViewBtn">
+      Open Google Street View
+    </button>
+
+    <button id="clearBtn">Clear All</button>
+
+    <hr />
+
+    <h3>Manual Parking</h3>
+
+    <p class="instruction">
+      Use this only when OSM parking lots are missing or incomplete.
+      Draw one or more parking polygons inside the analysis boundary.
+    </p>
+
+    <button id="manualParkingBtn">Add Manual Parking Polygon</button>
+    <button id="clearManualParkingBtn">Clear Manual Parking</button>
+
+    <div id="summary">
+      <p>
+        Search a place, draw a custom polygon, and analyze buildings,
+        tenants, and parking lots inside the selected area.
+      </p>
+    </div>
+
+    <h3>Building Use</h3>
+
+    <div class="legend-item"><span class="box retail"></span> Retail / Commercial</div>
+    <div class="legend-item"><span class="box residential"></span> Residential</div>
+    <div class="legend-item"><span class="box hotel"></span> Hotel</div>
+    <div class="legend-item"><span class="box office"></span> Office</div>
+    <div class="legend-item"><span class="box parking"></span> OSM Parking Lot</div>
+    <div class="legend-item"><span class="box manual-parking"></span> Manual Parking Lot</div>
+    <div class="legend-item"><span class="box unknown"></span> Unknown</div>
+    <div class="legend-item"><span class="polygon-symbol"></span> Analysis Boundary</div>
+
+    <hr />
+
+    <h3>Tenant Categories</h3>
+
+    <div class="legend-item"><span class="dot food"></span> Food & Beverage</div>
+    <div class="legend-item"><span class="dot grocery"></span> Grocery / Food Retail</div>
+    <div class="legend-item"><span class="dot fashion"></span> Fashion / Apparel</div>
+    <div class="legend-item"><span class="dot home"></span> Home / Furniture</div>
+    <div class="legend-item"><span class="dot beauty"></span> Beauty / Personal Care</div>
+    <div class="legend-item"><span class="dot service"></span> Service / Health</div>
+    <div class="legend-item"><span class="dot fitness"></span> Fitness / Leisure</div>
+    <div class="legend-item"><span class="dot office-dot"></span> Office Tenant</div>
+    <div class="legend-item"><span class="dot other"></span> Other Retail / Amenity</div>
+  </div>
+
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+  <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

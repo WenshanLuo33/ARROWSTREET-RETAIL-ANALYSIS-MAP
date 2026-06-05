@@ -1,0 +1,148 @@
+html, body {
+  margin: 0;
+  height: 100%;
+  font-family: Arial, sans-serif;
+}
+
+#map {
+  position: absolute;
+  left: 300px;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}
+
+#sidebar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 270px;
+  height: 100%;
+  padding: 16px;
+  background: #ffffff;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+  z-index: 1000;
+  overflow-y: auto;
+}
+
+h2 {
+  margin-top: 0;
+}
+
+h3 {
+  margin-bottom: 8px;
+}
+
+label {
+  display: block;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  margin-top: 4px;
+}
+
+button {
+  margin-top: 10px;
+  width: 100%;
+  padding: 10px;
+  border: none;
+  background: #111;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #333;
+}
+
+#manualParkingBtn {
+  background: #666;
+}
+
+#manualParkingBtn:hover {
+  background: #444;
+}
+
+#clearManualParkingBtn {
+  background: #999;
+}
+
+#clearManualParkingBtn:hover {
+  background: #777;
+}
+
+#summary {
+  margin-top: 16px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.instruction {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #444;
+}
+
+.legend-item {
+  font-size: 13px;
+  margin: 7px 0;
+}
+
+.box {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 6px;
+  vertical-align: middle;
+  border: 1px solid rgba(0,0,0,0.25);
+}
+
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+/* Buildings */
+.retail { background: #e45756; }
+.residential { background: #4c78a8; }
+.hotel { background: #f2cf5b; }
+.office { background: #b279a2; }
+.parking { background: #d9d9d9; }
+.manual-parking { background: #bfbfbf; }
+.unknown { background: #8f8f8f; }
+
+/* Drawn analysis boundary */
+.polygon-symbol {
+  display: inline-block;
+  width: 22px;
+  border-top: 2px dashed #4a4a4a;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* Tenant dots */
+.food { background: red; }
+.grocery { background: green; }
+.fashion { background: purple; }
+.home { background: orange; }
+.beauty { background: pink; }
+.service { background: blue; }
+.fitness { background: cadetblue; }
+.office-dot { background: darkviolet; }
+.other { background: gray; }
+
+hr {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 16px 0;
+}
