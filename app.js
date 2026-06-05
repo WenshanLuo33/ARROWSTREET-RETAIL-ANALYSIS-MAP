@@ -1,3 +1,5 @@
+const MAPBOX_TOKEN = "YOUR_MAPBOX_TOKEN_HERE";
+
 // =========================
 // Map setup
 // =========================
@@ -20,12 +22,26 @@ const esriSatellite = L.tileLayer(
   }
 );
 
+const mapboxTraffic = L.tileLayer(
+  `https://api.mapbox.com/styles/v1/mapbox/traffic-day-v2/tiles/256/{z}/{x}/{y}?access_token=${MAPBOX_TOKEN}`,
+  {
+    attribution: "© Mapbox © OpenStreetMap",
+    tileSize: 256,
+    maxZoom: 20
+  }
+);
+
+let trafficExtentLayer = null;
+let trafficLayerVisible = false;
+
+
 cartoLight.addTo(map);
 
 L.control.layers(
   {
     "Light Map": cartoLight,
-    "Satellite": esriSatellite
+    "Satellite": esriSatellite,
+    "Traffic Map": mapboxTraffic
   },
   null,
   {
@@ -163,7 +179,7 @@ map.on(L.Draw.Event.CREATED, function (event) {
       <b>Manual Parking Lot</b><br>
       <b>Area:</b> ${metrics.areaSqFt.toLocaleString()} sf<br>
       <b>Estimated Spaces:</b> ${metrics.estimatedCapacity.toLocaleString()}<br>
-      <b>Source:</b> Manually drawn / area ÷ 330 sf
+      <b>Source:</b> Manually drawn / area ÷ 420 sf
     `);
 
     document.getElementById("summary").innerHTML =
@@ -312,6 +328,40 @@ function isFeatureInsidePolygon(feature, polygon) {
   } catch (e) {
     return false;
   }
+}
+
+function createFiveMileTrafficRectangle(polygon) {
+  const center = turf.centroid(polygon);
+  const lon = center.geometry.coordinates[0];
+  const lat = center.geometry.coordinates[1];
+
+  const halfMiles = 2.5;
+  const halfMeters = halfMiles * 1609.34;
+
+  const deltaLat = halfMeters / 111320;
+  const deltaLon = halfMeters / (111320 * Math.cos(lat * Math.PI / 180));
+
+  const south = lat - deltaLat;
+  const north = lat + deltaLat;
+  const west = lon - deltaLon;
+  const east = lon + deltaLon;
+
+  return {
+    type: "Feature",
+    properties: {
+      name: "5-mile Traffic Reference Area"
+    },
+    geometry: {
+      type: "Polygon",
+      coordinates: [[
+        [west, south],
+        [east, south],
+        [east, north],
+        [west, north],
+        [west, south]
+      ]]
+    }
+  };
 }
 
 // =========================
@@ -590,7 +640,7 @@ function estimateParkingMetrics(feature) {
   const rawCapacity = feature.properties.capacity || null;
   const osmCapacity = rawCapacity ? parseInt(rawCapacity, 10) : null;
 
-  const estimatedCapacity = Math.round(areaSqFt / 330);
+  const estimatedCapacity = Math.round(areaSqFt / 420);
 
   return {
     areaSqFt: Math.round(areaSqFt),
@@ -598,14 +648,14 @@ function estimateParkingMetrics(feature) {
     estimatedCapacity: Number.isFinite(osmCapacity) ? osmCapacity : estimatedCapacity,
     capacitySource: Number.isFinite(osmCapacity)
       ? "OSM capacity tag"
-      : "Estimated by area / 330 sf per space"
+      : "Estimated by area / 420 sf per space"
   };
 }
 
 function estimateManualParkingMetrics(feature) {
   const areaSqM = turf.area(feature);
   const areaSqFt = areaSqM * 10.7639;
-  const estimatedCapacity = Math.round(areaSqFt / 330);
+  const estimatedCapacity = Math.round(areaSqFt / 420);
 
   return {
     areaSqFt: Math.round(areaSqFt),
@@ -665,7 +715,7 @@ function getManualParkingFeatures() {
       parking_area_sf: metrics.areaSqFt,
       osm_capacity: null,
       estimated_capacity: metrics.estimatedCapacity,
-      capacity_source: "Manually drawn / area ÷ 330 sf"
+      capacity_source: "Manually drawn / area ÷ 420 sf"
     };
 
     features.push(feature);
@@ -767,6 +817,22 @@ async function runAnalysis() {
 
   const bbox = polygonToBbox(selectedPolygon);
 
+  if (trafficExtentLayer) {
+    map.removeLayer(trafficExtentLayer);
+  }
+
+  const trafficRectangle = createFiveMileTrafficRectangle(selectedPolygon);
+
+  trafficExtentLayer = L.geoJSON(trafficRectangle, {
+    style: {
+      color: "#ff8800",
+      weight: 2,
+      dashArray: "8,6",
+      fillOpacity: 0
+    }
+  }).addTo(map);
+
+
   try {
     const rawGeojson = await fetchOSMData(bbox);
 
@@ -855,7 +921,7 @@ async function runAnalysis() {
     parkingLayer = L.geoJSON(parkingLots, {
       style: feature => {
         const isManual =
-          feature.properties.capacity_source === "Manually drawn / area ÷ 330 sf";
+          feature.properties.capacity_source === "Manually drawn / area ÷ 420 sf";
 
         return {
           fillColor: isManual ? "#bfbfbf" : "#d9d9d9",
@@ -995,7 +1061,7 @@ async function runAnalysis() {
       <p><b>Formula Notes</b><br>
       Site acreage = polygon area / 43,560<br>
       Retail area = sum of Retail / Commercial building footprints<br>
-      Parking count = OSM capacity, or parking lot area / 330 sf; manual parking also uses area / 330 sf<br>
+      Parking count = OSM capacity, or parking lot area / 420 sf; manual parking also uses area / 420 sf<br>
       Parking ratio = spaces / retail sf × 1,000<br>
       SF per parking space = retail sf / spaces<br>
       Building coverage = total building footprint area / site area</p>
@@ -1036,6 +1102,10 @@ function clearAll() {
   if (buildingLayer) map.removeLayer(buildingLayer);
   if (poiLayer) map.removeLayer(poiLayer);
   if (parkingLayer) map.removeLayer(parkingLayer);
+  if (trafficExtentLayer) {
+    map.removeLayer(trafficExtentLayer);
+    trafficExtentLayer = null;
+  }
 
   const parkingBtn = document.getElementById("manualParkingBtn");
   if (parkingBtn) {
