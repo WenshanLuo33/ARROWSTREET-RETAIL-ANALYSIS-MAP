@@ -179,7 +179,7 @@ map.on(L.Draw.Event.CREATED, function (event) {
       <b>Manual Parking Lot</b><br>
       <b>Area:</b> ${metrics.areaSqFt.toLocaleString()} sf<br>
       <b>Estimated Spaces:</b> ${metrics.estimatedCapacity.toLocaleString()}<br>
-      <b>Source:</b> Manually drawn / area ÷ 420 sf
+      <b>Source:</b> Manually drawn / area ÷ 400 sf
     `);
 
     document.getElementById("summary").innerHTML =
@@ -640,7 +640,7 @@ function estimateParkingMetrics(feature) {
   const rawCapacity = feature.properties.capacity || null;
   const osmCapacity = rawCapacity ? parseInt(rawCapacity, 10) : null;
 
-  const estimatedCapacity = Math.round(areaSqFt / 420);
+  const estimatedCapacity = Math.round(areaSqFt / 400);
 
   return {
     areaSqFt: Math.round(areaSqFt),
@@ -648,14 +648,14 @@ function estimateParkingMetrics(feature) {
     estimatedCapacity: Number.isFinite(osmCapacity) ? osmCapacity : estimatedCapacity,
     capacitySource: Number.isFinite(osmCapacity)
       ? "OSM capacity tag"
-      : "Estimated by area / 420 sf per space"
+      : "Estimated by area / 400 sf per space"
   };
 }
 
 function estimateManualParkingMetrics(feature) {
   const areaSqM = turf.area(feature);
   const areaSqFt = areaSqM * 10.7639;
-  const estimatedCapacity = Math.round(areaSqFt / 420);
+  const estimatedCapacity = Math.round(areaSqFt / 400);
 
   return {
     areaSqFt: Math.round(areaSqFt),
@@ -715,7 +715,7 @@ function getManualParkingFeatures() {
       parking_area_sf: metrics.areaSqFt,
       osm_capacity: null,
       estimated_capacity: metrics.estimatedCapacity,
-      capacity_source: "Manually drawn / area ÷ 420 sf"
+      capacity_source: "Manually drawn / area ÷ 400 sf"
     };
 
     features.push(feature);
@@ -921,7 +921,7 @@ async function runAnalysis() {
     parkingLayer = L.geoJSON(parkingLots, {
       style: feature => {
         const isManual =
-          feature.properties.capacity_source === "Manually drawn / area ÷ 420 sf";
+          feature.properties.capacity_source === "Manually drawn / area ÷ 400 sf";
 
         return {
           fillColor: isManual ? "#bfbfbf" : "#d9d9d9",
@@ -1061,7 +1061,7 @@ async function runAnalysis() {
       <p><b>Formula Notes</b><br>
       Site acreage = polygon area / 43,560<br>
       Retail area = sum of Retail / Commercial building footprints<br>
-      Parking count = OSM capacity, or parking lot area / 420 sf; manual parking also uses area / 420 sf<br>
+      Parking count = OSM capacity, or parking lot area / 400 sf; manual parking also uses area / 400 sf<br>
       Parking ratio = spaces / retail sf × 1,000<br>
       SF per parking space = retail sf / spaces<br>
       Building coverage = total building footprint area / site area</p>
